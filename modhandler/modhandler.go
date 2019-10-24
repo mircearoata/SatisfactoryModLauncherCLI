@@ -78,7 +78,7 @@ func GetDownloadedModVersions(modID string) ([]string, error) {
 	versions := []string{}
 	modZips := getModZips(modID)
 	if len(modZips) == 0 {
-		return []string{""}, errors.New("Mod " + modID + " not installed")
+		return []string{""}, errors.New("Mod " + modID + " not downloaded")
 	}
 	for _, file := range modZips {
 		modData := GetDataFromZip(file)
@@ -86,7 +86,7 @@ func GetDownloadedModVersions(modID string) ([]string, error) {
 	}
 	sort.Strings(versions)
 	if len(versions) == 0 {
-		return []string{""}, errors.New("No version of " + modID + " is installed")
+		return []string{""}, errors.New("No version of " + modID + " is downloaded")
 	}
 	return versions, nil
 }

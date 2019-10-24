@@ -94,6 +94,9 @@ func GetModVersions(modID string) []ModVersion {
 	var respData map[string]interface{}
 	err := api.Run(ctx, req, &respData)
 	util.Check(err)
+	if respData["getMod"] == nil {
+		log.Fatalln("Mod " + modID + " does not exist")
+	}
 	versions := respData["getMod"].(map[string]interface{})["versions"].([]ModVersion)
 	return versions
 }
@@ -105,7 +108,11 @@ func GetLatestModVersion(modID string) string {
 	var respData map[string]interface{}
 	err := api.Run(ctx, req, &respData)
 	util.Check(err)
-	latestVersions := respData["getMod"].(map[string]interface{})["latestVersions"].(map[string]interface{})
+	if respData["getMod"] == nil {
+		log.Fatalln("Mod " + modID + " does not exist")
+	}
+	mod := respData["getMod"].(map[string]interface{})
+	latestVersions := mod["latestVersions"].(map[string]interface{})
 	versions := []string{}
 	for _, versionStability := range availableVersionStabilities {
 		if latestVersions[versionStability] != nil {
@@ -153,6 +160,9 @@ func DownloadModVersion(modID string, version string) (bool, error) {
 	var respData map[string]interface{}
 	err := api.Run(ctx, req, &respData)
 	util.Check(err)
+	if respData["getMod"] == nil {
+		log.Fatalln("Mod " + modID + " does not exist")
+	}
 	versionResponse := respData["getMod"].(map[string]interface{})["version"]
 	if versionResponse == nil {
 		return false, errors.New("Mod " + modID + " has no version " + version)

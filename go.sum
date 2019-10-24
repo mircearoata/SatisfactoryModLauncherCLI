@@ -1,3 +1,5 @@
+github.com/akamensky/argparse v0.0.0-20191006154803-1427fe674291 h1:EQ9p1v9+urDzbGQfAcBf9fGuDtYqFNE7YJHZ54TWPTk=
+github.com/akamensky/argparse v0.0.0-20191006154803-1427fe674291/go.mod h1:pdh+2piXurh466J9tqIqq39/9GO2Y8nZt6Cxzu18T9A=
 github.com/machinebox/graphql v0.2.2 h1:dWKpJligYKhYKO5A2gvNhkJdQMNZeChZYyBbrZkBZfo=
 github.com/machinebox/graphql v0.2.2/go.mod h1:F+kbVMHuwrQ5tYgU9JXlnskM8nOaFxCAEolaQybkjWA=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=

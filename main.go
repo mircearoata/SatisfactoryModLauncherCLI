@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/akamensky/argparse"
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/ficsitapp"
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/modhandler"
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/paths"
@@ -15,31 +16,20 @@ import (
 
 const SMLAUNCHER_VERSION = "0.0.1"
 
+const helpMessage = `
+Satisfactory Mod Launcher CLI
+Commands: 
+	help - displays this help message
+	download - download a mod from https://ficsit.app by its id and version (optional, defaults to newest)
+	remove - deletes a downloaded mod
+	update - downloads the newest version of the mod and deletes the old ones
+	install - installs the mod to the Satisfactory install
+	uninstall - removes the mod from the Satisfactory install
+	list_versions - shows the list of downloaded versions of a mod
+	version - shows the Satisfactory Mod Launcher CLI version
+`
+
 var args []string
-
-func paramNeeded(param string) {
-	log.Fatalln(param + " is needed")
-}
-
-func readParam(name string, needed bool) string {
-	if len(args) == 0 {
-		if needed {
-			paramNeeded(name)
-		}
-		return ""
-	}
-	ret := args[0]
-	args = args[1:]
-	return ret
-}
-
-func readParamDefault(name string, defaultValue string) string {
-	val := readParam(name, false)
-	if val == "" {
-		return defaultValue
-	}
-	return val
-}
 
 func initSMLauncher() {
 	paths.Init()
@@ -48,16 +38,22 @@ func initSMLauncher() {
 
 func main() {
 	initSMLauncher()
-
 	args = os.Args[1:]
-	commandName := readParam("command", false)
-	if len(commandName) == 0 {
-		fmt.Println("Available commands: download, remove, update, version")
+	if len(args) == 0 {
+		fmt.Println(helpMessage)
 		return
 	}
-	if commandName == "download" || commandName == "remove" || commandName == "update" || commandName == "list_versions" {
-		modID := readParam("modID", true)
-		version := readParam("modVersion", false)
+	commandName := os.Args[1]
+	parser := argparse.NewParser("SatisfactoryModLauncher CLI", "Handles mod download and install")
+	modID_param := parser.String("m", "mod", &argparse.Options{Required: true, Help: "ficsit.app mod ID"})
+	version_param := parser.String("v", "version", &argparse.Options{Required: false, Help: "mod version"})
+	if commandName == "help" {
+		fmt.Println(helpMessage)
+	} else if commandName == "download" || commandName == "remove" || commandName == "update" || commandName == "list_versions" {
+		err := parser.Parse(args)
+		util.Check(err)
+		modID := *modID_param
+		version := *version_param
 		if commandName == "download" {
 			if len(version) == 0 {
 				version = ficsitapp.GetLatestModVersion(modID)
@@ -97,9 +93,12 @@ func main() {
 			fmt.Println(strings.Join(modVersions, ", "))
 		}
 	} else if commandName == "install" || commandName == "uninstall" {
-		satisfactoryPath := readParam("satisfactoryPath (ending in Binaries/Win64)", true)
-		modID := readParam("modID", true)
-		version := readParam("modVersion", false)
+		satisfactoryPath_param := parser.String("p", "path", &argparse.Options{Required: true, Help: "satisfactory install path (ending in Binaries/Win64)"})
+		err := parser.Parse(args)
+		util.Check(err)
+		satisfactoryPath := *satisfactoryPath_param
+		modID := *modID_param
+		version := *version_param
 		if len(version) == 0 {
 			var err error
 			version, err = modhandler.GetLatestDownloadedVersion(modID)
