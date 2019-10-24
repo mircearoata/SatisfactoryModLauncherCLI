@@ -112,7 +112,6 @@ func main() {
 			modhandler.Install(modID, version, satisfactoryPath)
 		} else if commandName == "uninstall" {
 			modhandler.Uninstall(modID, version, satisfactoryPath)
-
 		}
 	} else if commandName == "version" {
 		fmt.Println(SMLAUNCHER_VERSION)

@@ -47,7 +47,7 @@ func GetDataFromZip(zipFileName string) DataJson {
 }
 
 func getModZips(modID string) []string {
-	modPath := path.Join(paths.ModsDir, modID)
+	modPath := paths.ModDir(modID)
 	files, err := ioutil.ReadDir(modPath)
 	if err != nil {
 		return []string{}
@@ -69,6 +69,7 @@ func findModZip(modID string, modVersion string) string {
 			return file
 		}
 	}
+	log.Fatalln("Mod " + modID + "@" + modVersion + " not found")
 	return ""
 }
 
@@ -126,7 +127,7 @@ func Update(modID string) bool {
 	return false
 }
 
-// Install Tries to install the mod to the SML path
+// Install the mod to the SML path
 func Install(modID string, modVersion string, smlPath string) bool {
 	smlModsDir := path.Join(smlPath, "mods")
 	modZipPath := findModZip(modID, modVersion)
@@ -135,16 +136,28 @@ func Install(modID string, modVersion string, smlPath string) bool {
 	return true
 }
 
-// Uninstall Tries to uninstall the mod from the SML path
+// Uninstall the mod from the SML path
 func Uninstall(modID string, modVersion string, smlPath string) bool {
 	smlModsDir := path.Join(smlPath, "mods")
-	modZipPath := findModZip(modID, modVersion)
-	// TODO: The check checksum or something with all the zips in the mods folder because the user might change the file name
-	smlModZipPath := path.Join(smlModsDir, path.Base(modZipPath))
-	if paths.Exists(smlModZipPath) {
-		err := os.Remove(smlModZipPath)
+	files, err := ioutil.ReadDir(smlModsDir)
+	if err != nil {
 		util.Check(err)
-		return true
+		return false
 	}
+	zipFiles := []string{}
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".zip") {
+			zipFiles = append(zipFiles, path.Join(smlModsDir, file.Name()))
+		}
+	}
+	for _, zipFile := range zipFiles {
+		modData := GetDataFromZip(zipFile)
+		if modData.ModID == modID && modData.Version == modVersion {
+			err := os.Remove(zipFile)
+			util.Check(err)
+			return true
+		}
+	}
+	log.Fatalln("Mod " + modID + "@" + modVersion + " is not installed")
 	return false
 }
