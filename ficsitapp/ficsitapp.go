@@ -3,10 +3,7 @@ package ficsitapp
 import (
 	"context"
 	"errors"
-	"io"
 	"log"
-	"net/http"
-	"os"
 	"path"
 	"sort"
 
@@ -15,13 +12,10 @@ import (
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/util"
 )
 
-const base_api = `https://api.ficsit.app`
-const ficsitapp_api = base_api + `/v2/query`
+const baseAPI = `https://api.ficsit.app`
+const ficsitappAPI = baseAPI + `/v2/query`
 
-var api *graphql.Client = graphql.NewClient(ficsitapp_api)
-
-func Init() {
-}
+var api *graphql.Client = graphql.NewClient(ficsitappAPI)
 
 const modVersionLatestRequest = `
 query($modID: ModID!){
@@ -82,18 +76,20 @@ func contains(s []string, e string) bool {
 	return false
 }
 
+// ModVersion from ficsit.app
 type ModVersion struct {
 	Version   string
 	Stability string
 }
 
+// GetModVersions gets the versions of the mod
 func GetModVersions(modID string) []ModVersion {
 	req := graphql.NewRequest(modVersionsRequest)
 	req.Var("modID", modID)
 	ctx := context.Background()
 	var respData map[string]interface{}
-	err := api.Run(ctx, req, &respData)
-	util.Check(err)
+	apiErr := api.Run(ctx, req, &respData)
+	util.Check(apiErr)
 	if respData["getMod"] == nil {
 		log.Fatalln("Mod " + modID + " does not exist")
 	}
@@ -101,13 +97,14 @@ func GetModVersions(modID string) []ModVersion {
 	return versions
 }
 
+// GetLatestModVersion gets the latest version of the mod
 func GetLatestModVersion(modID string) string {
 	req := graphql.NewRequest(modVersionLatestRequest)
 	req.Var("modID", modID)
 	ctx := context.Background()
 	var respData map[string]interface{}
-	err := api.Run(ctx, req, &respData)
-	util.Check(err)
+	apiErr := api.Run(ctx, req, &respData)
+	util.Check(apiErr)
 	if respData["getMod"] == nil {
 		log.Fatalln("Mod " + modID + " does not exist")
 	}
@@ -129,37 +126,15 @@ func GetLatestModVersion(modID string) string {
 	return versions[len(versions)-1]
 }
 
-// DownloadFile will download a url to a local file. It's efficient because it will
-// write as it downloads and not load the whole file into memory.
-func DownloadFile(filepath string, url string) error {
-
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
-	return err
-}
-
+// DownloadModVersion downloads the specified version of the mod
 func DownloadModVersion(modID string, version string) (bool, error) {
 	req := graphql.NewRequest(modVersionDownloadLinkRequest)
 	req.Var("modID", modID)
 	req.Var("version", version)
 	ctx := context.Background()
 	var respData map[string]interface{}
-	err := api.Run(ctx, req, &respData)
-	util.Check(err)
+	apiErr := api.Run(ctx, req, &respData)
+	util.Check(apiErr)
 	if respData["getMod"] == nil {
 		log.Fatalln("Mod " + modID + " does not exist")
 	}
@@ -167,14 +142,15 @@ func DownloadModVersion(modID string, version string) (bool, error) {
 	if versionResponse == nil {
 		return false, errors.New("Mod " + modID + " has no version " + version)
 	}
-	link := base_api + versionResponse.(map[string]interface{})["link"].(string)
-	err = DownloadFile(path.Join(paths.ModDir(modID), modID+"_"+version+".zip"), link)
-	if err != nil {
-		return false, err
+	link := baseAPI + versionResponse.(map[string]interface{})["link"].(string)
+	downloadErr := util.DownloadFile(path.Join(paths.ModDir(modID), modID+"_"+version+".zip"), link)
+	if downloadErr != nil {
+		return false, downloadErr
 	}
 	return true, nil
 }
 
+// DownloadModLatest downloads the latest version of the mod
 func DownloadModLatest(modID string) (bool, error) {
 	return DownloadModVersion(modID, GetLatestModVersion(modID))
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/util"
 )
 
+// SatisfactoryInstall part of Epic Games' manifest
 type SatisfactoryInstall struct {
 	Name             string
 	Version          string
@@ -15,18 +16,23 @@ type SatisfactoryInstall struct {
 	LaunchExecutable string
 }
 
-const EpicGamesManifestsPath = `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests`
+const epicGamesManifestsPath = `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests`
 
+// SatisfactoryVersions keep track of the SF install dirs
 var SatisfactoryVersions []SatisfactoryInstall = []SatisfactoryInstall{}
 
+// TODO: support version names (EA/EXP) instead of full paths
+// TODO: find where the manifests are stored in other OSs
+
+// FindSatisfactoryInstalls checks Epic Games' manifests for SF install dirs
 func FindSatisfactoryInstalls() {
-	files, err := ioutil.ReadDir(EpicGamesManifestsPath)
+	files, err := ioutil.ReadDir(epicGamesManifestsPath)
 	util.Check(err)
 	for _, manifestFile := range files {
 		if manifestFile.IsDir() {
 			continue
 		}
-		manifestContent, err2 := ioutil.ReadFile(path.Join(EpicGamesManifestsPath, manifestFile.Name()))
+		manifestContent, err2 := ioutil.ReadFile(path.Join(epicGamesManifestsPath, manifestFile.Name()))
 		util.Check(err2)
 		var manifest map[string]interface{}
 		json.Unmarshal([]byte(manifestContent), &manifest)
