@@ -69,3 +69,13 @@ func Sha256File(path string) string {
 	hash := hasher.Sum(nil)
 	return hex.EncodeToString(hash)
 }
+
+// Contains come on go, it is obvious what this function does
+func Contains(array []string, elem string) bool {
+	for _, x := range array {
+		if x == elem {
+			return true
+		}
+	}
+	return false
+}

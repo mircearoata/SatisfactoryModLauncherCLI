@@ -4,12 +4,15 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/Masterminds/semver"
 
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/ficsitapp"
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/paths"
@@ -146,6 +149,14 @@ func Remove(modID string, modVersion string) bool {
 	return true
 }
 
+func shouldDownloadUpdate(oldVersion string, updateVersion string) bool {
+	old, oldErr := semver.NewVersion(oldVersion)
+	util.Check(oldErr)
+	new, newErr := semver.NewVersion(updateVersion)
+	util.Check(newErr)
+	return old.Compare(new) == -1
+}
+
 // Update Tries to update the mod. Returns true if the mod was updated, false if the local file is already up to date
 func Update(modID string) bool {
 	ficsitAppModVersion := ficsitapp.GetLatestModVersion(modID)
@@ -196,4 +207,31 @@ func Uninstall(modID string, modVersion string, smlPath string) bool {
 	}
 	log.Fatalln("Mod " + modID + "@" + modVersion + " is not installed")
 	return false
+}
+
+// CheckForUpdates compares the installed version with the newest available and optionally downloads it
+func CheckForUpdates(install bool) bool {
+	downloadedMods := GetDownloadedMods()
+	uniqueMods := []string{}
+	for _, downloadedMod := range downloadedMods {
+		if !util.Contains(uniqueMods, downloadedMod.ModID) {
+			uniqueMods = append(uniqueMods, downloadedMod.ModID)
+		}
+	}
+	hasUpdates := false
+	for _, mod := range uniqueMods {
+		latestVersion := ficsitapp.GetLatestModVersion(mod)
+		downloadedVersion, _ := GetLatestDownloadedVersion(mod)
+		hasUpdate := shouldDownloadUpdate(downloadedVersion, latestVersion)
+		if hasUpdate {
+			if install {
+				Update(mod)
+				fmt.Println("Updated " + mod + " to " + latestVersion)
+			} else {
+				fmt.Println(mod + "@" + latestVersion + " available")
+			}
+			hasUpdates = true
+		}
+	}
+	return hasUpdates
 }

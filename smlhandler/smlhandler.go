@@ -4,6 +4,7 @@ import (
 	"C"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -166,4 +167,20 @@ func UninstallSML(satisfactoryPath string) error {
 	}
 	err := os.Remove(dllPath)
 	return err
+}
+
+// CheckForUpdates compares the installed version with the newest available and optionally downloads it
+func CheckForUpdates(satisfactoryPath string, install bool) bool {
+	latestVersion := GetLatestSML().Version
+	hasUpdate := shouldInstall(satisfactoryPath, latestVersion)
+	if hasUpdate {
+		if install {
+			UpdateSML(satisfactoryPath)
+			fmt.Println("Updated SML to " + latestVersion)
+		} else {
+			fmt.Println("SML@" + latestVersion + " available")
+		}
+		return true
+	}
+	return false
 }

@@ -24,6 +24,7 @@ Commands:
 	download - download a mod from https://ficsit.app by its id and version (optional, defaults to newest)
 	remove - deletes a downloaded mod
 	update - downloads the newest version of the mod and deletes the old ones
+	check_updates - checks for available new versions of mods and SML
 	install - installs the mod to the Satisfactory install
 	uninstall - removes the mod from the Satisfactory install
 	install_sml - installs SML
@@ -168,6 +169,18 @@ func main() {
 			uninstallErr := smlhandler.UninstallSML(satisfactoryPath)
 			util.Check(uninstallErr)
 			fmt.Println("Uninstalled SML")
+		}
+	} else if commandName == "check_updates" {
+		satisfactoryPathParam := parser.String("p", "path", &argparse.Options{Required: true, Help: "satisfactory install path (ending in Binaries/Win64)"})
+		autoInstallParam := parser.Flag("i", "install", &argparse.Options{Required: false, Help: "Automatically download and install the updates"})
+		parseErr := parser.Parse(args)
+		util.Check(parseErr)
+		satisfactoryPath := *satisfactoryPathParam
+		autoInstall := *autoInstallParam
+		hasModUpdates := modhandler.CheckForUpdates(autoInstall)
+		hasSMLUpdates := smlhandler.CheckForUpdates(satisfactoryPath, autoInstall)
+		if !hasModUpdates && !hasSMLUpdates {
+			fmt.Println("Already up to date")
 		}
 	} else if commandName == "mods_dir" {
 		fmt.Println(paths.ModsDir)
