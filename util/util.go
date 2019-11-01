@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,7 +14,7 @@ import (
 // Check will print the error and exit
 func Check(err error) {
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalln(err)
 		os.Exit(1)
 	}
 }

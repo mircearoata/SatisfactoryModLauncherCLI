@@ -45,16 +45,17 @@ func initSMLauncher() {
 }
 
 func main() {
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
 	initSMLauncher()
 	args = os.Args[1:]
 	if len(args) == 0 {
-		fmt.Println(helpMessage)
+		log.Println(helpMessage)
 		return
 	}
 	commandName := os.Args[1]
 	parser := argparse.NewParser("SatisfactoryModLauncher CLI", "Handles mod download and install")
 	if commandName == "help" {
-		fmt.Println(helpMessage)
+		log.Println(helpMessage)
 	} else if commandName == "download" || commandName == "remove" || commandName == "update" || commandName == "list_versions" {
 		modIDParam := parser.String("m", "mod", &argparse.Options{Required: true, Help: "ficsit.app mod ID"})
 		versionParam := parser.String("v", "version", &argparse.Options{Required: false, Help: "mod version"})
@@ -190,6 +191,6 @@ func main() {
 	} else if commandName == "version" {
 		fmt.Println(smlauncherVersion)
 	} else {
-		fmt.Println("Unrecognized command \"" + commandName + "\"")
+		log.Println("Unrecognized command \"" + commandName + "\"")
 	}
 }
