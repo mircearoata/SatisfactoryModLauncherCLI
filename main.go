@@ -171,14 +171,17 @@ func main() {
 			fmt.Println("Uninstalled SML")
 		}
 	} else if commandName == "check_updates" {
-		satisfactoryPathParam := parser.String("p", "path", &argparse.Options{Required: true, Help: "satisfactory install path (ending in Binaries/Win64)"})
+		satisfactoryPathParam := parser.String("p", "path", &argparse.Options{Required: false, Help: "satisfactory install path (ending in Binaries/Win64)"})
 		autoInstallParam := parser.Flag("i", "install", &argparse.Options{Required: false, Help: "Automatically download and install the updates"})
 		parseErr := parser.Parse(args)
 		util.Check(parseErr)
 		satisfactoryPath := *satisfactoryPathParam
 		autoInstall := *autoInstallParam
 		hasModUpdates := modhandler.CheckForUpdates(autoInstall)
-		hasSMLUpdates := smlhandler.CheckForUpdates(satisfactoryPath, autoInstall)
+		hasSMLUpdates := false
+		if satisfactoryPath != "" {
+			hasSMLUpdates = smlhandler.CheckForUpdates(satisfactoryPath, autoInstall)
+		}
 		if !hasModUpdates && !hasSMLUpdates {
 			fmt.Println("Already up to date")
 		}

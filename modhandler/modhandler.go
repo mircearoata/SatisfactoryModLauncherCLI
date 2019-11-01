@@ -180,6 +180,7 @@ func Update(modID string) bool {
 // Install the mod to the SML path
 func Install(modID string, modVersion string, smlPath string) bool {
 	smlModsDir := path.Join(smlPath, "mods")
+	os.MkdirAll(smlModsDir, os.ModePerm)
 	modZipPath := findModZip(modID, modVersion)
 	copyErr := paths.CopyFile(modZipPath, path.Join(smlModsDir, path.Base(modZipPath)))
 	util.Check(copyErr)
