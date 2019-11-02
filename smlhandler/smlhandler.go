@@ -48,7 +48,7 @@ var oldVersionsChecksum map[string]string = map[string]string{
 func GetInstalledVersion(satisfactoryPath string) string {
 	dllPath := path.Join(satisfactoryPath, "xinput1_3.dll")
 	if !paths.Exists(dllPath) {
-		return ""
+		return "Not Installed"
 	}
 	dllPathNullTerminated := append([]byte(dllPath), 0)
 	dll, _, loadErr := procLoadLibraryExA.Call(uintptr(unsafe.Pointer(&dllPathNullTerminated[0])), uintptr(unsafe.Pointer(nil)), 1)
@@ -66,7 +66,7 @@ func GetInstalledVersion(satisfactoryPath string) string {
 				return k
 			}
 		}
-		return "0.0.0"
+		return "UNKNOWN"
 	}
 	smlVersionFinal := C.GoString((*C.char)(unsafe.Pointer(smlVersion)))
 	return smlVersionFinal
@@ -122,7 +122,7 @@ func GetLatestSML() SMLRelease {
 func shouldInstall(satisfactoryPath string, version string) bool {
 	installed, semverErr1 := semver.NewVersion(GetInstalledVersion(satisfactoryPath))
 	if semverErr1 != nil {
-		return false // invalid semver
+		return true // invalid semver => not installed
 	}
 	new, semverErr2 := semver.NewVersion(version)
 	if semverErr2 != nil {
