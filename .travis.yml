@@ -1,0 +1,29 @@
+language: go
+
+env: GO111MODULE=on
+
+go:
+- 1.13.x
+
+os:
+  # there is no SML for linux or mac, so...
+  # - linux
+  # - osx
+  - windows
+
+install: true
+
+script:
+- go build
+
+deploy:
+  provider: releases
+  api_key:
+    secure: QUTNxmT+srrEA8dLRhHHcZiRN0/iE6CeQ25Fw5b1wFhUgzQHcVY0RVZ4J1SAXVSpGArUzF4Yf9UuMyhi0FIwYMERTaLT+4z+tUZ/whRS/rjYZQQ2nJq1HJlntSMmZNlXHcolhHkIGKdo3q4wBrt1mubEfg8jmRk1qcVJxxGKjmyG0H8On+jA2gPx0yH3CfZAyywpLIvElaGJz7S+mRP5U7/F8yi9ehzjp2oY/56EFEWUFZbCVwC0aSt63fxTopCf3uRRUkzXHfkSdgptGGcm9nZmOJ2TzVvMybNSQ1p1jeSE7q4RSQyNsY09FauAIsdKAAhYl/HTJNJPaufqalZTlg+ms1zhprvR7r3vSx6mGVF3G3FsZnCH7wyszfNex/EeSVBoDup2m9YUnJLI9rX/+X5iIV95Ue6VYAL0hwLi67c1akA35tXw8VPUC8psobwzeiUHjGjlL84c/AVbz7UNZFdcKeRVAWC8m+HefOALLUNcBMK7AVnHFW6XdABOU8ZtGtTEcxDhmmR5y6XuQROY5IeQC9T7ekI7CRgNS+/LyunFIyyTmDdMyaMibKt3r3Oj7tGnYaar3ZYgFolO5d0yOriYsSSVeuOhpXgo+e2NuDtVgWdHekH/hGe4894miOr0usWxysyDMYnTDbPedV4QOtBlSswBm4veKslekDz+QLI=
+  file_glob: true
+  file: SatisfactoryModLauncherCLI*
+  skip_cleanup: true
+  draft: true
+  on:
+    repo: mircearoata/SatisfactoryModLauncherCLI
+    tags: true
