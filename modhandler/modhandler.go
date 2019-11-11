@@ -27,12 +27,14 @@ type ModFile struct {
 
 // DataJSON contains the data.json information
 type DataJSON struct {
-	ModID       string    `json:"mod_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	Description string    `json:"description"`
-	Authors     []string  `json:"authors"`
-	Objects     []ModFile `json:"objects"`
+	ModID           string            `json:"mod_id"`
+	Name            string            `json:"name"`
+	Version         string            `json:"version"`
+	Description     string            `json:"description"`
+	Authors         []string          `json:"authors"`
+	Objects         []ModFile         `json:"objects"`
+	Dependencies    map[string]string `json:"dependencies"`
+	OptDependencies map[string]string `json:"optional_dependencies"`
 }
 
 // GetDataFromZip returns the data.json file in the zip
@@ -45,6 +47,9 @@ func GetDataFromZip(zipFileName string) DataJSON {
 			fileContent := util.ReadAllFromZip(file)
 			var data DataJSON
 			json.Unmarshal(fileContent, &data)
+			if strings.HasPrefix(data.Version, "v") {
+				data.Version = data.Version[1:]
+			}
 			return data
 		}
 	}
@@ -84,7 +89,7 @@ func GetDownloadedModVersions(modID string) ([]string, error) {
 	versions := []string{}
 	modZips := getModZips(modID)
 	if len(modZips) == 0 {
-		return []string{""}, errors.New("Mod " + modID + " not downloaded")
+		return []string{}, errors.New("Mod " + modID + " not downloaded")
 	}
 	for _, file := range modZips {
 		modData := GetDataFromZip(file)
@@ -92,7 +97,7 @@ func GetDownloadedModVersions(modID string) ([]string, error) {
 	}
 	sort.Strings(versions)
 	if len(versions) == 0 {
-		return []string{""}, errors.New("No version of " + modID + " is downloaded")
+		return []string{}, errors.New("No version of " + modID + " is downloaded")
 	}
 	return versions, nil
 }
@@ -135,7 +140,16 @@ func GetInstalledMods(smlPath string) []DataJSON {
 // GetLatestDownloadedVersion Returns the latest downloaded version of the mod
 func GetLatestDownloadedVersion(modID string) (string, error) {
 	versions, getDownloadedErr := GetDownloadedModVersions(modID)
+	if len(versions) == 0 {
+		return "", getDownloadedErr
+	}
 	return versions[len(versions)-1], getDownloadedErr
+}
+
+// GetDependencies returns the non optional dependencies of a mod
+func GetDependencies(modID string, modVersion string) map[string]string {
+	data := GetDataFromZip(findModZip(modID, modVersion))
+	return data.Dependencies
 }
 
 // Remove Removes the mod file from the downloaded mods
@@ -146,6 +160,11 @@ func Remove(modID string, modVersion string) bool {
 	}
 	removeErr := os.Remove(modZip)
 	util.Check(removeErr)
+	dirEmpty, _ := paths.IsEmpty(paths.ModDir(modID))
+	if dirEmpty {
+		removeErr := os.Remove(paths.ModDir(modID))
+		util.Check(removeErr)
+	}
 	return true
 }
 
@@ -158,7 +177,7 @@ func shouldDownloadUpdate(oldVersion string, updateVersion string) bool {
 }
 
 // Update Tries to update the mod. Returns true if the mod was updated, false if the local file is already up to date
-func Update(modID string) bool {
+func Update(modID string) (bool, int) {
 	ficsitAppModVersion := ficsitapp.GetLatestModVersion(modID)
 	localModVersion, getLatestDownloadedErr := GetLatestDownloadedVersion(modID)
 	util.Check(getLatestDownloadedErr)
@@ -170,11 +189,10 @@ func Update(modID string) bool {
 			removeErr := os.Remove(modFile)
 			util.Check(removeErr)
 		}
-		success, downloadErr := ficsitapp.DownloadModLatest(modID)
-		util.Check(downloadErr)
-		return success
+		success, dependencyCnt := DownloadModWithDependencies(modID, ficsitapp.GetLatestModVersion(modID))
+		return success, dependencyCnt
 	}
-	return false
+	return false, 0
 }
 
 // Install the mod to the SML path
@@ -235,4 +253,101 @@ func CheckForUpdates(install bool) bool {
 		}
 	}
 	return hasUpdates
+}
+
+// GetDownloadedModVersionWithConstraint returns the latest downloaded version that meets the constraint
+func GetDownloadedModVersionWithConstraint(modID string, versionConstraint string) string {
+	versions, _ := GetDownloadedModVersions(modID)
+	constraint, constraintErr := semver.NewConstraint(versionConstraint)
+	util.Check(constraintErr)
+	for _, version := range versions {
+		ver, err := semver.NewVersion(version)
+		util.Check(err)
+		if constraint.Check(ver) {
+			return version
+		}
+	}
+	return ""
+}
+
+// GetInstalledModsVersions returns the data.jsons of the versions of the mod
+func GetInstalledModsVersions(modID string, smlPath string) []DataJSON {
+	mods := GetInstalledMods(smlPath)
+	modVersions := []DataJSON{}
+	for _, mod := range mods {
+		if mod.ModID == modID {
+			modVersions = append(modVersions, mod)
+		}
+	}
+	return modVersions
+}
+
+// GetInstalledModVersionWithConstraint returns the latest installed version that meets the constraint
+func GetInstalledModVersionWithConstraint(modID string, versionConstraint string, smlPath string) string {
+	mods := GetInstalledModsVersions(modID, smlPath)
+	constraint, constraintErr := semver.NewConstraint(versionConstraint)
+	util.Check(constraintErr)
+	for _, modVersion := range mods {
+		ver, err := semver.NewVersion(modVersion.Version)
+		util.Check(err)
+		if constraint.Check(ver) {
+			return modVersion.Version
+		}
+	}
+	return ""
+}
+
+// DownloadModWithDependencies downloads the mod and its dependencies
+func DownloadModWithDependencies(modID string, version string) (bool, int) {
+	success, downloadErr := ficsitapp.DownloadModVersion(modID, version)
+	util.Check(downloadErr)
+	if success {
+		dependencyCnt := 0
+		dependencies := GetDependencies(modID, version)
+		for dependencyID, dependencyVersionConstraint := range dependencies {
+			if GetDownloadedModVersionWithConstraint(dependencyID, dependencyVersionConstraint) == "" {
+				depVersion, depErr := ficsitapp.GetModFromVersionConstraint(dependencyID, dependencyVersionConstraint)
+				util.Check(depErr)
+				dependencySuccess, depDepCnt := DownloadModWithDependencies(dependencyID, depVersion)
+				if !dependencySuccess {
+					success = false
+					log.Println("Error downloading dependency " + dependencyID + "@" + dependencyVersionConstraint + " for mod " + modID + "@" + version)
+				} else {
+					dependencyCnt = dependencyCnt + depDepCnt
+				}
+			}
+		}
+		return success, dependencyCnt + 1
+	}
+	return false, 0
+}
+
+// InstallModWithDependencies installs the mod and its dependencies
+func InstallModWithDependencies(modID string, version string, smlPath string) bool {
+	success := Install(modID, version, smlPath)
+	if success {
+		dependencies := GetDependencies(modID, version)
+		for dependencyID, dependencyVersionConstraint := range dependencies {
+			if GetInstalledModVersionWithConstraint(dependencyID, dependencyVersionConstraint, smlPath) == "" {
+				depVersion := GetDownloadedModVersionWithConstraint(dependencyID, dependencyVersionConstraint)
+				if depVersion == "" {
+					var depErr error
+					depVersion, depErr = ficsitapp.GetModFromVersionConstraint(dependencyID, dependencyVersionConstraint)
+					fmt.Println("Dependency " + dependencyID + "@" + dependencyVersionConstraint + " is not downloaded. Downloading " + dependencyID + "@" + depVersion)
+					util.Check(depErr)
+					downloadSuccess, _ := DownloadModWithDependencies(dependencyID, depVersion)
+					if !downloadSuccess {
+						log.Println("Error downloading dependency " + dependencyID + "@" + dependencyVersionConstraint + " for mod " + modID + "@" + version)
+					}
+				}
+				dependencySuccess := InstallModWithDependencies(dependencyID, depVersion, smlPath)
+				if !dependencySuccess {
+					success = false
+					log.Println("Error installing dependency " + dependencyID + "@" + dependencyVersionConstraint + " for mod " + modID + "@" + version)
+				}
+			}
+		}
+		return success
+	}
+	return false
 }

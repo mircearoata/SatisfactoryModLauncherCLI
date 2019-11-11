@@ -23,6 +23,7 @@ var SatisfactoryVersions []SatisfactoryInstall = []SatisfactoryInstall{}
 
 // TODO: support version names (EA/EXP) instead of full paths
 // TODO: find where the manifests are stored in other OSs
+// Actually, this ^ won't work for dedicated servers, so exact paths are still needed
 
 // FindSatisfactoryInstalls checks Epic Games' manifests for SF install dirs
 func FindSatisfactoryInstalls() {

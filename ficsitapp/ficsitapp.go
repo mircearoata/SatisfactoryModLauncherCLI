@@ -6,7 +6,9 @@ import (
 	"log"
 	"path"
 	"sort"
+	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/machinebox/graphql"
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/paths"
 	"github.com/mircearoata/SatisfactoryModLauncherCLI/util"
@@ -93,8 +95,24 @@ func GetModVersions(modID string) []ModVersion {
 	if respData["getMod"] == nil {
 		log.Fatalln("Mod " + modID + " does not exist")
 	}
-	versions := respData["getMod"].(map[string]interface{})["versions"].([]ModVersion)
-	return versions
+	versions := (respData["getMod"].(map[string]interface{})["versions"]).([]interface{})
+	structVersions := []ModVersion{}
+	for _, version := range versions {
+		structVersion := ModVersion{version.(map[string]interface{})["version"].(string), version.(map[string]interface{})["stability"].(string)}
+		structVersions = append(structVersions, structVersion)
+	}
+	sort.Slice(versions, func(i, j int) bool {
+		verA, errA := semver.NewVersion(structVersions[i].Version)
+		verB, errB := semver.NewVersion(structVersions[j].Version)
+		if errA != nil {
+			return false
+		}
+		if errB != nil {
+			return true
+		}
+		return verA.Compare(verB) == -1
+	})
+	return structVersions
 }
 
 // GetLatestModVersion gets the latest version of the mod
@@ -122,7 +140,17 @@ func GetLatestModVersion(modID string) string {
 	if len(versions) == 0 {
 		log.Fatalln("Mod " + modID + " has no available version")
 	}
-	sort.Strings(versions)
+	sort.Slice(versions, func(i, j int) bool {
+		verA, errA := semver.NewVersion(versions[i])
+		verB, errB := semver.NewVersion(versions[j])
+		if errA != nil {
+			return false
+		}
+		if errB != nil {
+			return true
+		}
+		return verA.Compare(verB) == -1
+	})
 	return versions[len(versions)-1]
 }
 
@@ -140,7 +168,12 @@ func DownloadModVersion(modID string, version string) (bool, error) {
 	}
 	versionResponse := respData["getMod"].(map[string]interface{})["version"]
 	if versionResponse == nil {
-		return false, errors.New("Mod " + modID + " has no version " + version)
+		// try with prefix v
+		vSuccess, vError := DownloadModVersion(modID, "v"+version)
+		if !vSuccess {
+			return false, errors.New("Mod " + modID + " has no version " + version)
+		}
+		return vSuccess, vError
 	}
 	link := baseAPI + versionResponse.(map[string]interface{})["link"].(string)
 	downloadErr := util.DownloadFile(path.Join(paths.ModDir(modID), modID+"_"+version+".zip"), link)
@@ -148,6 +181,25 @@ func DownloadModVersion(modID string, version string) (bool, error) {
 		return false, downloadErr
 	}
 	return true, nil
+}
+
+// GetModFromVersionConstraint returns the latest mod version which meets a constraint
+func GetModFromVersionConstraint(modID string, versionConstraint string) (string, error) {
+	version := ""
+	constraint, constraintErr := semver.NewConstraint(versionConstraint)
+	util.Check(constraintErr)
+	for _, availableVersion := range GetModVersions(modID) {
+		ver, verErr := semver.NewVersion(availableVersion.Version)
+		util.Check(verErr)
+		if constraint.Check(ver) {
+			version = availableVersion.Version
+			if strings.HasPrefix(version, "v") {
+				version = version[1:]
+			}
+			return version, nil
+		}
+	}
+	return "", errors.New("No version of mod " + modID + " matched constraint " + versionConstraint)
 }
 
 // DownloadModLatest downloads the latest version of the mod

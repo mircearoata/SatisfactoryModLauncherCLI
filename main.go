@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/akamensky/argparse"
@@ -67,10 +68,9 @@ func main() {
 			if len(version) == 0 {
 				version = ficsitapp.GetLatestModVersion(modID)
 			}
-			success, downloadErr := ficsitapp.DownloadModVersion(modID, version)
-			util.Check(downloadErr)
+			success, dependencyCnt := modhandler.DownloadModWithDependencies(modID, version)
 			if success {
-				fmt.Println("Downloaded " + modID + "@" + version)
+				fmt.Println("Downloaded " + modID + "@" + version + " and " + strconv.Itoa(dependencyCnt-1) + " dependencies")
 			} else {
 				fmt.Println("Mod " + modID + "@" + version + " could not be downloaded")
 			}
@@ -89,11 +89,11 @@ func main() {
 				}
 			}
 		} else if commandName == "update" {
-			updated := modhandler.Update(modID)
+			updated, dependencyCnt := modhandler.Update(modID)
 			currentVersion, getLatestDownloadedErr := modhandler.GetLatestDownloadedVersion(modID)
 			util.Check(getLatestDownloadedErr)
 			if updated {
-				fmt.Println("Updated " + modID + " to " + currentVersion)
+				fmt.Println("Updated " + modID + " to " + currentVersion + " downloading " + strconv.Itoa(dependencyCnt-1) + " dependencies")
 			} else {
 				fmt.Println(modID + " is already up to date (" + currentVersion + ")")
 			}
@@ -119,7 +119,7 @@ func main() {
 			log.Fatalln(errors.New("Invalid Satisfactory path"))
 		}
 		if commandName == "install" {
-			modhandler.Install(modID, version, satisfactoryPath)
+			modhandler.InstallModWithDependencies(modID, version, satisfactoryPath)
 		} else if commandName == "uninstall" {
 			modhandler.Uninstall(modID, version, satisfactoryPath)
 		}

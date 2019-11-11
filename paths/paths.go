@@ -10,6 +10,7 @@ import (
 var SMLauncherDir = path.Join(os.Getenv("LOCALAPPDATA"), "SatisfactoryModLauncher")
 var ModsDir = path.Join(SMLauncherDir, "DownloadedMods")
 
+// Exists returns true if the path exists
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -21,6 +22,22 @@ func Exists(path string) bool {
 	return true
 }
 
+// IsEmpty returns true if the folder is empty
+func IsEmpty(name string) (bool, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1) // Or f.Readdir(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err // Either not empty or error, suits both cases
+}
+
+// Init initializes this module
 func Init() {
 	if !Exists(SMLauncherDir) {
 		os.MkdirAll(SMLauncherDir, os.ModePerm)
@@ -30,6 +47,7 @@ func Init() {
 	}
 }
 
+// ModDir returns the path the mod should be downloaded to and creates it if it doesn't exist
 func ModDir(modID string) string {
 	modDir := path.Join(ModsDir, modID)
 	if !Exists(modDir) {
