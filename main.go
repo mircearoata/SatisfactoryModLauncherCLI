@@ -119,9 +119,17 @@ func main() {
 			log.Fatalln(errors.New("Invalid Satisfactory path"))
 		}
 		if commandName == "install" {
-			modhandler.InstallModWithDependencies(modID, version, satisfactoryPath)
+			if modhandler.InstallModWithDependencies(modID, version, satisfactoryPath) {
+				fmt.Println("Installed mod " + modID + "@" + version)
+			} else {
+				fmt.Println("Failed to install mod " + modID + "@" + version)
+			}
 		} else if commandName == "uninstall" {
-			modhandler.Uninstall(modID, version, satisfactoryPath)
+			if modhandler.Uninstall(modID, version, satisfactoryPath) {
+				fmt.Println("Uninstalled mod " + modID + "@" + version)
+			} else {
+				fmt.Println("Failed to uninstall mod " + modID + "@" + version)
+			}
 		}
 	} else if commandName == "list" {
 		mods := modhandler.GetDownloadedMods()

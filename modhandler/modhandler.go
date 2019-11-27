@@ -197,6 +197,9 @@ func Update(modID string) (bool, int) {
 
 // Install the mod to the SML path
 func Install(modID string, modVersion string, smlPath string) bool {
+	if IsModInstalled(modID, smlPath) {
+		return false
+	}
 	smlModsDir := path.Join(smlPath, "mods")
 	os.MkdirAll(smlModsDir, os.ModePerm)
 	modZipPath := findModZip(modID, modVersion)
@@ -270,8 +273,8 @@ func GetDownloadedModVersionWithConstraint(modID string, versionConstraint strin
 	return ""
 }
 
-// GetInstalledModsVersions returns the data.jsons of the versions of the mod
-func GetInstalledModsVersions(modID string, smlPath string) []DataJSON {
+// GetInstalledModVersions returns the data.jsons of the versions of the mod
+func GetInstalledModVersions(modID string, smlPath string) []DataJSON {
 	mods := GetInstalledMods(smlPath)
 	modVersions := []DataJSON{}
 	for _, mod := range mods {
@@ -282,9 +285,33 @@ func GetInstalledModsVersions(modID string, smlPath string) []DataJSON {
 	return modVersions
 }
 
+// IsModInstalled checks if a mod is installed
+func IsModInstalled(modID string, smlPath string) bool {
+	versions := GetInstalledModVersions(modID, smlPath)
+	return len(versions) > 0
+}
+
+// IsModVersionWithConstraintInstalled checks if a mod is installed
+func IsModVersionWithConstraintInstalled(modID string, versionConstraint string, smlPath string) bool {
+	versions := GetInstalledModVersionWithConstraint(modID, versionConstraint, smlPath)
+	return len(versions) > 0
+}
+
+// IsModVersionInstalled checks if a mod is installed
+func IsModVersionInstalled(modID string, version string, smlPath string) bool {
+	versions := GetInstalledModVersions(modID, smlPath)
+	versionsString := []string{}
+	fmt.Println(modID, version, versionsString)
+	for _, ver := range versions {
+		versionsString = append(versionsString, ver.Version)
+	}
+	fmt.Println(modID, version, versionsString)
+	return util.Contains(versionsString, version)
+}
+
 // GetInstalledModVersionWithConstraint returns the latest installed version that meets the constraint
 func GetInstalledModVersionWithConstraint(modID string, versionConstraint string, smlPath string) string {
-	mods := GetInstalledModsVersions(modID, smlPath)
+	mods := GetInstalledModVersions(modID, smlPath)
 	constraint, constraintErr := semver.NewConstraint(versionConstraint)
 	util.Check(constraintErr)
 	for _, modVersion := range mods {
@@ -344,6 +371,8 @@ func InstallModWithDependencies(modID string, version string, smlPath string) bo
 				if !dependencySuccess {
 					success = false
 					log.Println("Error installing dependency " + dependencyID + "@" + dependencyVersionConstraint + " for mod " + modID + "@" + version)
+				} else {
+					fmt.Println("Installed dependency " + dependencyID + "@" + depVersion + " for mod " + modID + "@" + version)
 				}
 			}
 		}
